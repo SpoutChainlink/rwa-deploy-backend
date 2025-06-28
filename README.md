@@ -1,98 +1,223 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Token Equity Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS-based backend service for Real World Asset (RWA) equity trading, integrating blockchain technology with traditional financial markets through Alpaca Markets API.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Overview
 
-## Description
+This application serves as a bridge between traditional finance and Web3, enabling tokenized equity trading through smart contracts while maintaining reserves tracking and real-time market data integration.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 📋 Table of Contents
 
-## Project setup
+- [Features](#features)
+- [Architecture](#architecture)
+- [Major Modules](#major-modules)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Testing](#testing)
 
-```bash
-$ npm install
+## ✨ Features
+
+- **Tokenized Asset Trading**: Buy/sell orders for tokenized equity assets
+- **Real-time Market Data**: Integration with Alpaca Markets for live stock quotes
+- **Blockchain Integration**: Web3 smart contract interaction using Ethers.js
+- **Event Monitoring**: Real-time blockchain event listening and processing
+- **Reserve Management**: Track and manage asset reserves across different tokens
+- **API Security**: API key-based authentication middleware
+- **Database Integration**: Supabase for persistent data storage
+- **Comprehensive API Documentation**: Auto-generated Swagger/OpenAPI docs
+
+## 🏗️ Architecture
+
+The application follows a modular NestJS architecture with the following key components:
+
+```
+src/
+├── alpaca/          # Alpaca Markets API integration
+├── orders/          # Order processing and management
+├── reserves/        # Asset reserves tracking
+├── supabase/        # Database service layer
+├── web3/            # Blockchain integration and event listening
+└── shared/          # Common utilities, models, and middleware
 ```
 
-## Compile and run the project
+## 🔧 Major Modules
 
+### 1. **Orders Module** (`/src/orders/`)
+- **Purpose**: Handles buy/sell order processing for tokenized assets
+- **Key Features**:
+  - Buy order processing with reserve increases
+  - Sell order processing with reserve decreases
+  - Order validation and transformation
+  - Integration with blockchain smart contracts
+
+### 2. **Alpaca Module** (`/src/alpaca/`)
+- **Purpose**: Integration with Alpaca Markets API for real-time stock market data
+- **Key Features**:
+  - Latest stock quotes retrieval
+  - Multi-symbol quote requests
+  - Real-time market data streaming
+  - Financial data normalization
+
+### 3. **Reserves Module** (`/src/reserves/`)
+- **Purpose**: Asset reserve management and tracking
+- **Key Features**:
+  - Individual asset reserve queries
+  - Total reserves calculation across all assets
+  - Reserve balance validation
+  - Historical reserve tracking
+
+### 4. **Web3 Module** (`/src/web3/`)
+- **Purpose**: Blockchain integration and smart contract interaction
+- **Key Features**:
+  - **Event Listener Service**: Real-time blockchain event monitoring
+  - **Token Service**: ERC-3643 token contract interactions
+  - **Provider Factory**: Web3 provider management (HTTP/WebSocket)
+  - Smart contract ABI integration
+
+### 5. **Supabase Module** (`/src/supabase/`)
+- **Purpose**: Database operations and data persistence
+- **Key Features**:
+  - Asset reserve CRUD operations
+  - Database connection management
+  - Data validation and error handling
+  - Backup and recovery support
+
+### 6. **Shared Module** (`/src/shared/`)
+- **Purpose**: Common utilities, models, and middleware
+- **Components**:
+  - **Models**: TypeScript interfaces and DTOs
+  - **Middleware**: API key authentication
+  - **ABI**: Smart contract Application Binary Interfaces
+  - **Network**: Blockchain network configuration
+
+## 🛠️ Installation
+
+1. **Clone the repository**:
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone <repository-url>
+cd token-equity-backend
 ```
 
-## Run tests
-
+2. **Install dependencies**:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
+3. **Set up environment variables** (see [Configuration](#configuration))
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+4. **Start the development server**:
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## ⚙️ Configuration
 
-## Resources
+Create a `.env` file in the root directory with the following variables:
 
-Check out a few resources that may come in handy when working with NestJS:
+```env
+# Blockchain RPC Configuration
+RPC_HTTP=<your-ethereum-rpc-http-endpoint>
+RPC_WSS=<your-ethereum-rpc-websocket-endpoint>
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# Supabase Configuration
+SUPABASE_KEY=<your-supabase-api-key>
 
-## Support
+# Alpaca Markets API
+APCA_API_KEY_ID=<your-alpaca-api-key-id>
+APCA_API_SECRET_KEY=<your-alpaca-secret-key>
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# API Security
+API_KEY=<your-custom-api-key>
+```
 
-## Stay in touch
+## 📚 API Documentation
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+The API documentation is automatically generated using Swagger/OpenAPI and is available at:
 
-## License
+```
+http://localhost:4200/api
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Main Endpoints:
+
+- **Orders**: `/orders/buy`, `/orders/sell`
+- **Reserves**: `/reserves/:assetSymbol`, `/reserves/total`
+- **Market Data**: `/alpaca/quotes/latest`
+
+### Authentication:
+All endpoints require an API key passed in the `x-api-key` header.
+
+## 🔧 Development
+
+### Available Scripts:
+
+```bash
+# Development
+npm run dev          # Start with hot reload
+npm run start        # Start production build
+npm run start:debug  # Start with debugging
+
+# Building
+npm run build        # Build the application
+
+# Code Quality
+npm run lint         # Run ESLint
+npm run format       # Format code with Prettier
+
+# Testing
+npm run test         # Run unit tests
+npm run test:watch   # Run tests in watch mode
+npm run test:cov     # Run tests with coverage
+npm run test:e2e     # Run end-to-end tests
+```
+
+### Project Structure:
+- **Controllers**: Handle HTTP requests and responses
+- **Services**: Contain business logic and external API interactions
+- **Modules**: Organize related components together
+- **Models**: Define data structures and validation rules
+- **Middleware**: Handle cross-cutting concerns like authentication
+
+## 🧪 Testing
+
+The project uses Jest for testing with the following setup:
+
+- **Unit Tests**: Test individual components and services
+- **Integration Tests**: Test module interactions
+- **E2E Tests**: Test complete user workflows
+
+Run tests with:
+```bash
+npm run test
+```
+
+## 🛡️ Security
+
+- **API Key Authentication**: All endpoints protected with API key middleware
+- **Input Validation**: Class-validator for request validation
+- **CORS Configuration**: Properly configured cross-origin requests
+- **Environment Variables**: Sensitive data stored in environment variables
+
+## 🔗 Dependencies
+
+### Core Technologies:
+- **NestJS**: Progressive Node.js framework
+- **Ethers.js**: Ethereum library for blockchain interaction
+- **Supabase**: Database and backend services
+- **Axios**: HTTP client for external API calls
+
+### Development Tools:
+- **TypeScript**: Type-safe JavaScript
+- **Swagger**: API documentation
+- **Jest**: Testing framework
+- **ESLint & Prettier**: Code quality and formatting
+
+## 📄 License
+
+This project is licensed under UNLICENSED.
+
+---
+
+**Note**: This is a private project for tokenized equity trading. Ensure all environment variables are properly configured before deployment.
