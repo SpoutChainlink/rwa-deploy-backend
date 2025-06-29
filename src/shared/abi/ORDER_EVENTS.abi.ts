@@ -1,5 +1,26 @@
 export const ORDER_CONTRACT_EVENTS_ABI = [
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_agent",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_usdc",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
       "inputs": [],
       "name": "EmptyArgs",
       "type": "error"
@@ -71,6 +92,25 @@ export const ORDER_CONTRACT_EVENTS_ABI = [
         }
       ],
       "name": "BuyOrderCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "FulFillSellOrderUSDCWithdraw",
       "type": "event"
     },
     {
@@ -200,12 +240,12 @@ export const ORDER_CONTRACT_EVENTS_ABI = [
     },
     {
       "inputs": [],
-      "name": "SOURCE",
+      "name": "agent",
       "outputs": [
         {
-          "internalType": "string",
+          "internalType": "address",
           "name": "",
-          "type": "string"
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -294,6 +334,29 @@ export const ORDER_CONTRACT_EVENTS_ABI = [
           "type": "bytes32"
         },
         {
+          "internalType": "bytes",
+          "name": "response",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes",
+          "name": "err",
+          "type": "bytes"
+        }
+      ],
+      "name": "handleOracleFulfillment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "requestId",
+          "type": "bytes32"
+        },
+        {
           "internalType": "uint256",
           "name": "price",
           "type": "uint256"
@@ -325,48 +388,6 @@ export const ORDER_CONTRACT_EVENTS_ABI = [
           "type": "bytes32"
         }
       ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "asset",
-          "type": "string"
-        }
-      ],
-      "name": "getPrice",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "requestId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "response",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bytes",
-          "name": "err",
-          "type": "bytes"
-        }
-      ],
-      "name": "handleOracleFulfillment",
-      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -572,6 +593,32 @@ export const ORDER_CONTRACT_EVENTS_ABI = [
         }
       ],
       "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "usdcToken",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawUSDC",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
