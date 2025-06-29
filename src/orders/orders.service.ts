@@ -35,7 +35,7 @@ export class OrdersService {
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, assetAmount);
 
       // Mint tokens for the user
-      // await this.tokenService.mintTokens(user, token, assetAmount);
+      await this.tokenService.mintTokens(user, token, assetAmount.toString() || '');
 
       return {
         success: true,
@@ -81,6 +81,9 @@ export class OrdersService {
 
       // Update asset reserve (negative delta for sell)
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, -assetAmount);
+
+       // Mint tokens for the user
+      await this.tokenService.burnTokens(user, token, assetAmount.toString() || '');
 
       return {
         success: true,
