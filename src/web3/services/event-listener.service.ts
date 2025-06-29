@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger, forwardRef } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ethers } from 'ethers';
 import { WEB3_WSS } from '../providers/provider.factory';
@@ -17,6 +17,7 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
     @Inject(WEB3_WSS) 
     private wssProvider: ethers.WebSocketProvider,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => OrdersService))
     private readonly ordersService: OrdersService
   ) {}
 
@@ -25,7 +26,7 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
    * Subscribes to WebSocket events from the order contract.
    */
   async onModuleInit() {
-    // await this.subscribeToEvents();
+    await this.subscribeToEvents();
   }
 
   /**
@@ -53,17 +54,26 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
       this.wssProvider,
     );
 
-    this.orderContract.on('BuyOrderCreated', async (user, token, usdcAmount, assetAmount, price, event) => {      
+    this.orderContract.on('BuyOrderCreated', async (user, ticker, token, usdcAmount, assetAmount, price, event) => {      
       try {
-        this.logger.log('Buy Order Event Received:', { user, token, usdcAmount, assetAmount, price });
-        const assetSymbol = 'LQD';
+        const usdcAmountDecimal = Number(usdcAmount);
+        const assetAmountDecimal = Number(assetAmount) / 1e16;
+        const priceDecimal = Number(price) / 1e2;
+        
+        this.logger.log('Buy Order Event Received:', { 
+          user, ticker, token,
+          usdcAmount: `$${usdcAmountDecimal}`, 
+          assetAmount: `S${assetAmountDecimal}`, 
+          price: `$${priceDecimal}` 
+        });
+        
         const orderRequest: OrderRequest = {
           user,
           token,
-          assetSymbol,
-          usdcAmount,
-          assetAmount,
-          price
+          assetSymbol: ticker,
+          usdcAmount: usdcAmountDecimal,
+          assetAmount: usdcAmountDecimal/priceDecimal,
+          price: priceDecimal
         };
         await this.ordersService.buyOrder(orderRequest);
       } catch (error) {
@@ -71,17 +81,25 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    this.orderContract.on('SellOrderCreated', async (user, token, usdcAmount, assetAmount, price, event) => {
+    this.orderContract.on('SellOrderCreated', async (user, ticker, token, usdcAmount, assetAmount, price, event) => {
       try {
-        this.logger.log('Sell Order Event Received:', { user, token, usdcAmount, assetAmount, price });
-        const assetSymbol = 'LQD';
+        const assetAmountDecimal = Number(assetAmount);
+        const priceDecimal = Number(price) / 1e2;
+        
+        this.logger.log('Sell Order Event Received:', { 
+          user, ticker, token,
+          usdcAmount: `$${assetAmountDecimal}`, 
+          assetAmount: `S${assetAmountDecimal/priceDecimal}`, 
+          price: `$${priceDecimal}` 
+        });
+        
         const orderRequest: OrderRequest = {
           user,
           token,
-          assetSymbol,
-          usdcAmount,
-          assetAmount,
-          price
+          assetSymbol: ticker,
+          usdcAmount: assetAmountDecimal,
+          assetAmount: assetAmountDecimal/priceDecimal,
+          price: priceDecimal
         };
         await this.ordersService.sellOrder(orderRequest);
       } catch (error) {

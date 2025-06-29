@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AlpacaService } from '../alpaca/alpaca.service';
 import { OrderRequest } from 'src/shared/models/order-request.model';
 import { OrderResponse } from 'src/shared/models/order-response.model';
+import { TokenService } from 'src/web3/services/token.service';
 
 @Injectable()
 export class OrdersService {
@@ -10,7 +11,8 @@ export class OrdersService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly alpacaService: AlpacaService
+    private readonly alpacaService: AlpacaService,
+    private readonly tokenService: TokenService
   ) {}
 
   /**
@@ -29,26 +31,11 @@ export class OrdersService {
 
       this.logger.log(`Processing buy order for ${usdcAmount}$ ${assetSymbol}`);
 
-      // Get Latest asset quote from Alpaca
-      // const quoteResponse = await this.alpacaService.getLatestQuotes(assetSymbol);
-      
-      // if (!quoteResponse?.quotes?.[assetSymbol]) {
-      //   throw new BadRequestException(`Unable to get quote for asset ${assetSymbol}`);
-      // }
-
-      // const askPrice = quoteResponse.quotes[assetSymbol].ap;
-      
-      // if (!askPrice || askPrice <= 0) {
-      //   throw new BadRequestException(`Invalid ask price for asset ${assetSymbol}`);
-      // }
-
-      // Calculate tokens to mint based on cash deposited and ask price
-      // const tokensToMint = amount / askPrice;
-
-      // this.logger.log(`Ask price for ${assetSymbol}: ${askPrice}$, Tokens to mint: ${tokensToMint}`);
-
       // Update asset reserve (using tokensToMint for buy)
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, assetAmount);
+
+      // Mint tokens for the user
+      // await this.tokenService.mintTokens(user, token, assetAmount);
 
       return {
         success: true,
@@ -79,24 +66,6 @@ export class OrdersService {
       }
 
       this.logger.log(`Processing sell order for ${usdcAmount}$ ${assetSymbol}`);
-
-      // Get Latest asset quote from Alpaca
-      // const quoteResponse = await this.alpacaService.getLatestQuotes(assetSymbol);
-
-      // if (!quoteResponse?.quotes?.[assetSymbol]) {
-      //   throw new BadRequestException(`Unable to get quote for asset ${assetSymbol}`);
-      // }
-
-      // const bidPrice = quoteResponse.quotes[assetSymbol].bp;
-      
-      // if (!bidPrice || bidPrice <= 0) {
-      //   throw new BadRequestException(`Invalid bid price for asset ${assetSymbol}`);
-      // }
-
-      // this.logger.log(`Bid price for ${assetSymbol}: ${bidPrice}$`);
-
-      // // Calculate tokens to burn based on cash withdrawal and bid price
-      // const tokensToBurn = amount / bidPrice;
 
       // Check if we have enough reserves before selling
       const currentReserve = await this.supabaseService.getAssetReserve(assetSymbol);

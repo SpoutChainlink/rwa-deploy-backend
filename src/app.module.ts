@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ApiKeyMiddleware } from './shared/middleware/api-key.middleware';
 import { AlpacaModule } from './alpaca/alpaca.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { AlpacaModule } from './alpaca/alpaca.module';
       }
     }),
     ScheduleModule.forRoot(),
-    OrdersModule, SupabaseModule, Web3Module, ReservesModule, AlpacaModule],
+    OrdersModule, SupabaseModule, Web3Module, ReservesModule, AlpacaModule, UserModule],
   controllers: [AppController]
 })
 

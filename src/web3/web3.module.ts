@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { EventListenerService } from './services/event-listener.service';
 import { TokenService } from './services/token.service';
 import { ProviderFactory } from './providers/provider.factory';
 import { OrdersModule } from '../orders/orders.module';
 
 @Module({
-  imports: [ProviderFactory, OrdersModule],
+  imports: [ProviderFactory, forwardRef(() => OrdersModule)],
   providers: [
     EventListenerService,
     TokenService
