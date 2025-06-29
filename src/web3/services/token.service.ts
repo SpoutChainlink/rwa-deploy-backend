@@ -66,6 +66,9 @@ export class TokenService {
             // Create contract instance with agent signer
             const token = new ethers.Contract(tokenAddress, ERC3643_ABI, agentSigner);
 
+            // Get the actual decimals from the token contract
+            const decimals = await token.decimals();
+            
             const isAgent = await token.isAgent(agentSigner.address);
             
             if (!isAgent) {
@@ -73,8 +76,8 @@ export class TokenService {
             }
             console.log(`Signer ${agentSigner.address} is an agent on the token contract ${tokenAddress}`);
 
-            // Estimate gas for the mint operation
-            const mintAmount = ethers.parseUnits(amount, 18);
+            // Use the actual token decimals instead of hardcoded 18
+            const mintAmount = ethers.parseUnits(amount, decimals);
             const gasEstimate = await token.mint.estimateGas(userAddress, mintAmount);
             const gasLimit = gasEstimate * BigInt(120) / BigInt(100);
             
@@ -124,6 +127,9 @@ export class TokenService {
         // Create contract instance with agent signer
         const token = new ethers.Contract(tokenAddress, ERC3643_ABI, agentSigner);
 
+        // Get the actual decimals from the token contract
+        const decimals = await token.decimals();
+        
         const isAgent = await token.isAgent(agentSigner.address);
         
         if (!isAgent) {
@@ -133,10 +139,10 @@ export class TokenService {
 
         // Check if user has sufficient balance to burn
         const balance = await token.balanceOf(userAddress);
-        const burnAmount = ethers.parseUnits(amount, 18);
+        const burnAmount = ethers.parseUnits(amount, decimals);
         
         if (balance < burnAmount) {
-            throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, 18)} tokens, trying to burn ${amount}`);
+            throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
         }
 
         // Estimate gas for the burn operation
