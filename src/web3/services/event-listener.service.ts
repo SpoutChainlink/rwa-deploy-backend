@@ -2,7 +2,6 @@ import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger, forwardRef }
 import { Cron } from '@nestjs/schedule';
 import { ethers } from 'ethers';
 import { WEB3_WSS } from '../providers/provider.factory';
-import { ORDER_CONTRACT_ADDRESS } from 'src/shared/network/network';
 import { ORDER_CONTRACT_EVENTS_ABI } from 'src/shared/abi/ORDER_EVENTS.abi';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../../orders/orders.service';
@@ -48,6 +47,10 @@ export class EventListenerService implements OnModuleInit, OnModuleDestroy {
    */
   private async subscribeToEvents() {
     await this.wssProvider.ready;
+    const ORDER_CONTRACT_ADDRESS = this.config.get<string>('ORDER_CONTRACT_ADDRESS');
+    if (!ORDER_CONTRACT_ADDRESS) {
+      throw new Error('ORDER_CONTRACT_ADDRESS is not defined in configuration');
+    }
     this.orderContract = new ethers.Contract(
       ORDER_CONTRACT_ADDRESS,
       ORDER_CONTRACT_EVENTS_ABI,

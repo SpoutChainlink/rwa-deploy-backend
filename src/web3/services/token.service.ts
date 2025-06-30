@@ -7,13 +7,19 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TokenService {
-    private readonly identityRegistryAddress = "0x296D988cd8193D5c67a71A68E9Bdf533f53f943E";
+    private readonly identityRegistryAddress: string;
 
     constructor(
         @Inject(WEB3_HTTP) 
         private httpProvider: ethers.JsonRpcProvider,
         private readonly config: ConfigService,
-    ) {}
+    ) {
+        const registryAddress = this.config.get<string>('IDENTITY_REGISTRY_ADDRESS');
+        if (!registryAddress) {
+            throw new Error('IDENTITY_REGISTRY_ADDRESS not configured');
+        }
+        this.identityRegistryAddress = registryAddress;
+    }
 
     /**
      * Verify if a user is verified in the identity registry

@@ -8,12 +8,18 @@ import { WEB3_HTTP } from '../web3/providers/provider.factory';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  private readonly identityRegistryAddress = "0x296D988cd8193D5c67a71A68E9Bdf533f53f943E";
+  private readonly identityRegistryAddress: string;
 
   constructor(
     private config: ConfigService,
     @Inject(WEB3_HTTP) private provider: ethers.JsonRpcProvider
-  ) {}
+  ) {
+    const registryAddress = this.config.get<string>('IDENTITY_REGISTRY_ADDRESS');
+    if (!registryAddress) {
+      throw new Error('IDENTITY_REGISTRY_ADDRESS not configured');
+    }
+    this.identityRegistryAddress = registryAddress;
+  }
 
   async issueKycClaimSignature(
     userAddress: string,
@@ -77,7 +83,7 @@ export class UserService {
   ): Promise<void> {
     this.logger.log(`Registering identity for user: ${userAddress} with onchainID: ${onchainIDAddress}`);
     
-    try {
+    try {   
       // Create contract instance
       const identityRegistry = new ethers.Contract(
         this.identityRegistryAddress,
