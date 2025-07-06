@@ -47,15 +47,31 @@ export class UserService {
       // Create issuer wallet
       const issuerWallet = new ethers.Wallet(issuerPrivateKey, this.provider);
 
-      // Use provided claim data and topic from frontend
+      // Step 1: Convert claim data to bytes and hash it
       const claimDataBytes = ethers.toUtf8Bytes(claimData);
+      const claimDataHash = ethers.keccak256(claimDataBytes);
+
+      // Step 2: ABI encode using the hashed claim data
       const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
         ["address", "uint256", "bytes"],
-        [onchainIDAddress, topic, claimDataBytes]
+        [onchainIDAddress, topic, claimDataHash] // Use hash here to match validation
       );
-      const dataHash = ethers.keccak256(encoded);
-      const ethHash = ethers.hashMessage(ethers.getBytes(dataHash));
-      const signature = issuerWallet.signingKey.sign(ethHash);
+      
+      // Step 3: Hash the encoded data
+      const messageHash = ethers.keccak256(encoded);
+
+      // Step 4: Sign the message hash
+      const signatureString = await issuerWallet.signMessage(ethers.getBytes(messageHash));
+      
+      // Split signature into r, s, v components
+      const signature = ethers.Signature.from(signatureString);
+
+      // Verify signature
+      const recoveredAddress = ethers.verifyMessage(
+        ethers.getBytes(messageHash),
+        signatureString
+      );
+      this.logger.log(`Signature valid: ${recoveredAddress.toLowerCase() === issuerWallet.address.toLowerCase()}`);
 
       // Register the identity in the registry
       await this.registerIdentity(userAddress, onchainIDAddress, countryCode, issuerWallet);
@@ -67,7 +83,7 @@ export class UserService {
           v: signature.v
         },
         issuerAddress: issuerWallet.address,
-        dataHash,
+        dataHash: messageHash,
         topic
       };
     } catch (error) {
