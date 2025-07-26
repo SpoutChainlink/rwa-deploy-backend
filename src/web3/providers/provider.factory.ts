@@ -14,6 +14,7 @@ export const WEB3_WSS  = Symbol('WEB3_WSS');
         if (!rpcHttp) {
           throw new Error('RPC_HTTP configuration is required');
         }
+        console.log(`Creating HTTP provider with RPC: ${rpcHttp}`);
         return new ethers.JsonRpcProvider(rpcHttp);
       },
       inject: [ConfigService],
@@ -25,6 +26,7 @@ export const WEB3_WSS  = Symbol('WEB3_WSS');
         if (!rpcWss) {
           throw new Error('RPC_WSS configuration is required');
         }
+        console.log(`Creating WebSocket provider with RPC: ${rpcWss}`);
         return new ethers.WebSocketProvider(rpcWss);
       },
       inject: [ConfigService],
