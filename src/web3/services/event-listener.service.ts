@@ -37,7 +37,7 @@ export class EventListenerService {
       const currentBlock = await this.httpProvider.getBlockNumber();
       let fromBlock: number;
       if (this.lastScannedBlock === 0) {
-        fromBlock = Math.max(0, currentBlock - 500); // First time running - scan last 500 blocks
+        fromBlock = Math.max(0, currentBlock - 50); // First time running - scan last 500 blocks
       } else {
         fromBlock = this.lastScannedBlock + 1; // Subsequent runs - scan from last scanned block + 1
       }
@@ -102,7 +102,7 @@ export class EventListenerService {
                 assetAmount: assetAmountDecimal,
                 price: priceDecimal
               };
-              // await this.ordersService.buyOrder(orderRequest);
+              await this.ordersService.buyOrder(orderRequest);
             }
           } catch (error) {
             this.logger.error('Error processing buy order from historical event:', error);
@@ -133,7 +133,7 @@ export class EventListenerService {
                 assetAmount: assetAmountDecimal,
                 price: priceDecimal
               };
-              // await this.ordersService.sellOrder(orderRequest);
+              await this.ordersService.sellOrder(orderRequest);
             }
           } catch (error) {
             this.logger.error('Error processing sell order from historical event:', error);
