@@ -117,6 +117,11 @@ export class UserService {
       if (!agentSigner.provider) {
         throw new Error('Provider is not set on agentSigner');
       }
+      const isAgent = await identityRegistry.isAgent(agentSigner.address);
+      if(!isAgent) {
+        throw new Error('Signer is not an Agent');
+      }
+
       const feeData = await agentSigner.provider.getFeeData();
       const gasPrice = feeData.gasPrice;
       const gasEstimate = await identityRegistry.registerIdentity.estimateGas(
@@ -125,7 +130,7 @@ export class UserService {
         countryCode
       );
       this.logger.log(`GasPrice: ${gasPrice} & gasEstimate: ${gasEstimate}`);
-
+      this.logger.log(`UserAddress: ${userAddress}, onchainIDAddress: ${onchainIDAddress}, countryCode ${countryCode}`);
       // Register the identity
       const tx = await identityRegistry.registerIdentity(
         userAddress,        // User's EOA
