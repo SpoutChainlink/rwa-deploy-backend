@@ -114,11 +114,27 @@ export class UserService {
         return;
       }
 
+      if (!agentSigner.provider) {
+        throw new Error('Provider is not set on agentSigner');
+      }
+      const feeData = await agentSigner.provider.getFeeData();
+      const gasPrice = feeData.gasPrice;
+      const gasEstimate = await identityRegistry.registerIdentity.estimateGas(
+        userAddress,
+        onchainIDAddress,
+        countryCode
+      );
+      this.logger.log(`GasPrice: ${gasPrice} & gasEstimate: ${gasEstimate}`);
+
       // Register the identity
       const tx = await identityRegistry.registerIdentity(
         userAddress,        // User's EOA
         onchainIDAddress,   // User's OnchainID contract
-        countryCode         // Country code
+        countryCode,         // Country code
+        {
+          gasLimit: gasEstimate * BigInt(120) / BigInt(100),
+          gasPrice,
+        }
       );
 
       this.logger.log(`Identity registration transaction sent: ${tx.hash}`);
