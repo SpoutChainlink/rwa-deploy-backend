@@ -3,11 +3,13 @@ import { WEB3_HTTP } from '../providers/provider.factory';
 import { ethers } from 'ethers';
 import { ERC3643_ABI } from 'src/shared/abi/ERC3643.abi';
 import { IDENTITY_REGISTRY_CONTRACT } from 'src/shared/abi/IDENTITY_REGISTRY.abi';
+import { ORDER_CONTRACT_EVENTS_ABI } from 'src/shared/abi/ORDER_EVENTS.abi';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TokenService {
     private readonly identityRegistryAddress: string;
+    private readonly orderContractAddress: string;
 
     constructor(
         @Inject(WEB3_HTTP) 
@@ -19,6 +21,12 @@ export class TokenService {
             throw new Error('IDENTITY_REGISTRY_ADDRESS not configured');
         }
         this.identityRegistryAddress = registryAddress;
+
+        const orderAddress = this.config.get<string>('ORDER_CONTRACT_ADDRESS');
+        if (!orderAddress) {
+            throw new Error('ORDER_CONTRACT_ADDRESS is not defined in configuration');
+        }
+        this.orderContractAddress = orderAddress;
     }
 
     /**
@@ -170,4 +178,49 @@ export class TokenService {
         throw new Error(`Failed to burn tokens: ${error.message}`);
     }
 }
+
+    /**
+     * Withdraw USDC tokens to a user address via the order contract
+     * @param amount - The amount of USDC to withdraw (in USDC units)
+     * @param userAddress - The address to withdraw USDC to
+     * @returns Transaction hash
+     */
+    async withdrawUSDC(amount: number, userAddress: string): Promise<string> {
+        try {
+            // Validate user address
+            if (!ethers.isAddress(userAddress)) {
+                throw new Error('Invalid user address');
+            }
+
+            // Create agent signer from private key
+            const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
+            
+            // Create order contract instance with agent signer
+            const orderContract = new ethers.Contract(
+                this.orderContractAddress,
+                ORDER_CONTRACT_EVENTS_ABI,
+                agentSigner
+            );
+
+            // Convert amount to BigInt (decimal adjustment already done)
+            const usdcAmount = BigInt(amount);
+
+            // Estimate gas for the withdraw operation
+            const gasEstimate = await orderContract['withdrawUSDC'].estimateGas(usdcAmount, userAddress);
+            const gasLimit = gasEstimate * BigInt(120) / BigInt(100);
+            
+            // Call withdrawUSDC function with gas limit
+            const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { gasLimit });
+            console.log(`Withdrawing ${amount} USDC to ${userAddress}`);
+            
+            // Wait for transaction confirmation
+            // await tx.wait();
+            console.log(`USDC withdrawal transaction: ${tx.hash}`);
+            
+            return tx.hash;
+        } catch (error) {
+            console.error('Error withdrawing USDC:', error);
+            throw new Error(`Failed to withdraw USDC: ${error.message}`);
+        }
+    }
 }
