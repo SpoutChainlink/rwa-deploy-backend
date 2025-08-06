@@ -84,7 +84,7 @@ export class EventListenerService {
               const [user, ticker, token, usdcAmount, assetAmount, price] = event.args;
               const usdcAmountDecimal = Number(usdcAmount) / 1e6;
               const priceDecimal = Number(price) / 1e8;
-              const assetAmountDecimal = usdcAmountDecimal / priceDecimal;
+              const assetAmountDecimal = Number(assetAmount) / 1e18;
 
               
               this.logger.log('Processing Buy Order Event:', { 
@@ -114,9 +114,9 @@ export class EventListenerService {
           try {
             if ('args' in event) {
               const [user, ticker, token, usdcAmount, assetAmount, price] = event.args;
-              const assetAmountDecimal = Number(assetAmount) / 1e6;
+              const assetAmountDecimal = Number(assetAmount) / 1e18;
               const priceDecimal = Number(price) / 1e8;
-              const usdcAmountDecimal = assetAmountDecimal * priceDecimal;
+              const usdcAmountDecimal = Number(usdcAmount)/ 1e6;
               
               this.logger.log('Processing Sell Order Event:', { 
                 user, ticker, token,

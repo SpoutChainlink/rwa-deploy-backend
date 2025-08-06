@@ -202,8 +202,8 @@ export class TokenService {
                 agentSigner
             );
 
-            // Convert amount to BigInt (decimal adjustment already done)
-            const usdcAmount = BigInt(amount);
+            // Convert amount to USDC wei (USDC has 6 decimal places)
+            const usdcAmount = ethers.parseUnits(amount.toString(), 6);
 
             // Estimate gas for the withdraw operation
             const gasEstimate = await orderContract['withdrawUSDC'].estimateGas(usdcAmount, userAddress);
