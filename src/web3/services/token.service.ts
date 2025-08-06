@@ -215,7 +215,7 @@ export class TokenService {
             
             // Wait for transaction confirmation
             await tx.wait();
-            console.log(`USDC withdrawal transaction: ${tx.hash}`);
+            console.log(`USDC withdrawal transaction confirmed: ${tx.hash}`);
             
             return tx.hash;
         } catch (error) {
