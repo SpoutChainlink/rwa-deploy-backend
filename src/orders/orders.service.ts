@@ -40,9 +40,6 @@ export class OrdersService {
       // Mint tokens for the user
       await this.tokenService.mintTokens(user, token, roundedAssetAmount.toString() || '');
 
-      // Transfer USDC back to user
-      await this.tokenService.withdrawUSDC(usdcAmount, user);
-
       return {
         success: true,
         message: `Successfully bought ${usdcAmount} USD worth of ${assetSymbol} (${roundedAssetAmount} tokens minted)`,
