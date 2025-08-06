@@ -211,7 +211,7 @@ export class TokenService {
             
             // Call withdrawUSDC function with gas limit
             const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { gasLimit });
-            console.log(`Withdrawing ${amount} USDC to ${userAddress}`);
+            console.log(`Withdrawing ${amount} USDC to ${userAddress} and tx is ${tx.hash}`);
             
             // Wait for transaction confirmation
             await tx.wait();
