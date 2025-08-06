@@ -115,7 +115,7 @@ export class EventListenerService {
             if ('args' in event) {
               const [user, ticker, token, usdcAmount, assetAmount, price] = event.args;
               const assetAmountDecimal = Number(assetAmount) / 1e6;
-              const priceDecimal = Number(price) / 1e11;
+              const priceDecimal = Number(price) / 1e8;
               const usdcAmountDecimal = assetAmountDecimal * priceDecimal;
               
               this.logger.log('Processing Sell Order Event:', { 
