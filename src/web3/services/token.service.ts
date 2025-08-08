@@ -205,12 +205,20 @@ export class TokenService {
             // Convert amount to USDC wei (USDC has 6 decimal places)
             const usdcAmount = ethers.parseUnits(amount.toString(), 6);
 
+            // Get the latest nonce for the agent signer and increment it
+            const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
+            const nextNonce = currentNonce + 1;
+            console.log(`Current nonce for ${agentSigner.address}: ${currentNonce}, using nonce: ${nextNonce}`);
+
             // Estimate gas for the withdraw operation
             const gasEstimate = await orderContract['withdrawUSDC'].estimateGas(usdcAmount, userAddress);
             const gasLimit = gasEstimate * BigInt(120) / BigInt(100);
             
-            // Call withdrawUSDC function with gas limit
-            const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { gasLimit });
+            // Call withdrawUSDC function with gas limit and nonce
+            const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { 
+                gasLimit, 
+                nonce: nextNonce 
+            });
             console.log(`Withdrawing ${amount} USDC to ${userAddress} and tx is ${tx.hash}`);
             
             // Wait for transaction confirmation
