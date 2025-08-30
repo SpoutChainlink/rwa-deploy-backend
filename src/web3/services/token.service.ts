@@ -62,20 +62,30 @@ export class TokenService {
      */
     private async fetchAndIncrementNonce(address: string): Promise<number> {
         let currentNonce: number;
+        let blockchainNonce: number;
+
+        // Always check the blockchain nonce for comparison
+        blockchainNonce = await this.httpProvider.getTransactionCount(address, 'latest');
 
         if (this.nonceManager.has(address)) {
             // Use local nonce counter
             currentNonce = this.nonceManager.get(address)!;
+            
+            // Safety check: if our local nonce is too far ahead or behind, resync
+            if (currentNonce < blockchainNonce || currentNonce > blockchainNonce + 10) {
+                console.log(`Nonce out of sync for ${address}. Local: ${currentNonce}, Blockchain: ${blockchainNonce}. Resyncing...`);
+                currentNonce = blockchainNonce;
+            }
         } else {
             // First time, fetch from blockchain
-            currentNonce = await this.httpProvider.getTransactionCount(address, 'latest');
+            currentNonce = blockchainNonce;
         }
 
         const nextNonce = currentNonce;
         // Increment for next transaction
         this.nonceManager.set(address, currentNonce + 1);
         
-        console.log(`Address ${address}: using nonce ${nextNonce}, next will be ${currentNonce + 1}`);
+        console.log(`Address ${address}: blockchain nonce ${blockchainNonce}, using nonce ${nextNonce}, next will be ${currentNonce + 1}`);
         return nextNonce;
     }
 
@@ -87,6 +97,15 @@ export class TokenService {
         const currentNonce = await this.httpProvider.getTransactionCount(address, 'latest');
         this.nonceManager.set(address, currentNonce);
         console.log(`Reset nonce for ${address} to ${currentNonce}`);
+    }
+
+    /**
+     * Clear all nonce counters (useful for debugging or restart scenarios)
+     */
+    private clearAllNonces(): void {
+        this.nonceManager.clear();
+        this.noncePromises.clear();
+        console.log('Cleared all nonce counters');
     }
 
     /**
