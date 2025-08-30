@@ -100,12 +100,11 @@ export class TokenService {
             
             // Call mint function with gas limit
             const tx = await token.mint(userAddress, mintAmount, { gasLimit });
-            console.log(`Minting ${amount} tokens to ${userAddress} on contract ${tokenAddress}`);
-            console.log(`Transaction hash: ${tx.hash}`);
-            
+            console.log(`Transaction hash: ${tx.hash}, Minting ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
+
             // Wait for transaction confirmation
             // await tx.wait();
-            console.log(`Transaction confirmed: ${tx.hash}`);
+            console.log(`Transaction confirmed: ${tx.hash}, Minting ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
             
             return tx.hash;
         } catch (error) {
@@ -173,13 +172,12 @@ export class TokenService {
         
         // Call burn function with gas limit
         const tx = await token.burn(userAddress, burnAmount, { gasLimit });
-        console.log(`Burning ${amount} tokens from ${userAddress} on contract ${tokenAddress}`);
-        console.log(`Transaction hash: ${tx.hash}`);
-        
+        console.log(`Transaction hash: ${tx.hash}, Burning ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
+
         // Wait for transaction confirmation
         // await tx.wait();
-        console.log(`Transaction confirmed: ${tx.hash}`);
-        
+        console.log(`Transaction confirmed: ${tx.hash}, Burning ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
+
         return tx.hash;
     } catch (error) {
         console.error('Error burning tokens:', error);
