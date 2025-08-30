@@ -93,13 +93,19 @@ export class TokenService {
             const factor = 10 ** decimals; // e.g., 6 decimals → 1_000_000
             const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
             const mintAmount = ethers.parseUnits(roundedAssetAmount, decimals);
+
+            // Get the latest nonce for the agent signer and increment it
+            const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
+            const nextNonce = currentNonce + 1;
+            console.log(`Current nonce for ${agentSigner.address}: ${currentNonce}, using nonce: ${nextNonce}`);
+
             const gasEstimate = await token.mint.estimateGas(userAddress, mintAmount);
             const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
 
             console.log(`Minting ${roundedAssetAmount} tokens (${mintAmount} wei) to ${userAddress}`);
             
-            // Call mint function with gas limit
-            const tx = await token.mint(userAddress, mintAmount, { gasLimit });
+            // Call mint function with gas limit and nonce
+            const tx = await token.mint(userAddress, mintAmount, { gasLimit, nonce: nextNonce });
             console.log(`Transaction hash: ${tx.hash}, Minting ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
 
             // Wait for transaction confirmation
@@ -163,6 +169,11 @@ export class TokenService {
             throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
         }
 
+        // Get the latest nonce for the agent signer and increment it
+        const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
+        const nextNonce = currentNonce + 1;
+        console.log(`Current nonce for ${agentSigner.address}: ${currentNonce}, using nonce: ${nextNonce}`);
+
         // Estimate gas for the burn operation
         const gasEstimate = await token.burn.estimateGas(userAddress, burnAmount);
         const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
@@ -170,8 +181,8 @@ export class TokenService {
         console.log(`Burning ${burnAmount} round off tokens`);
 
         
-        // Call burn function with gas limit
-        const tx = await token.burn(userAddress, burnAmount, { gasLimit });
+        // Call burn function with gas limit and nonce
+        const tx = await token.burn(userAddress, burnAmount, { gasLimit, nonce: nextNonce });
         console.log(`Transaction hash: ${tx.hash}, Burning ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
 
         // Wait for transaction confirmation
