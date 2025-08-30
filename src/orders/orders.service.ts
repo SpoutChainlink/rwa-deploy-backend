@@ -24,9 +24,6 @@ export class OrdersService {
     try {
       const { user, token, assetSymbol, usdcAmount, assetAmount, price } = orderRequest;
 
-      // Round assetAmount to 2 decimal places
-      const roundedAssetAmount = Math.round(assetAmount * 100) / 100;
-
       // Validate input
       if (!assetSymbol || usdcAmount <= 0) {
         throw new BadRequestException('Invalid asset symbol or amount');
@@ -35,17 +32,17 @@ export class OrdersService {
       this.logger.log(`Processing buy order for ${usdcAmount}$ ${assetSymbol}`);
 
       // Update asset reserve (using tokensToMint for buy)
-      const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, roundedAssetAmount);
+      const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, assetAmount);
 
       // Mint tokens for the user
-      await this.tokenService.mintTokens(user, token, roundedAssetAmount.toString() || '');
+      await this.tokenService.mintTokens(user, token, assetAmount.toString() || '');
 
       return {
         success: true,
-        message: `Successfully bought ${usdcAmount} USD worth of ${assetSymbol} (${roundedAssetAmount} tokens minted)`,
+        message: `Successfully bought ${usdcAmount} USD worth of ${assetSymbol} (${assetAmount} tokens minted)`,
         assetSymbol,
         amount: usdcAmount,
-        tokenMinted: roundedAssetAmount,
+        tokenMinted: assetAmount,
         newTokenReserve: updatedReserve.reserve_amount
       };
     } catch (error) {
@@ -63,9 +60,6 @@ export class OrdersService {
     try {
       const { user, token, assetSymbol, usdcAmount, assetAmount, price } = orderRequest;
 
-      // Round assetAmount to 2 decimal places
-      const roundedAssetAmount = Math.round(assetAmount * 100) / 100;
-
       // Validate input
       if (!assetSymbol || usdcAmount <= 0) {
         throw new BadRequestException('Invalid asset symbol or amount');
@@ -79,27 +73,27 @@ export class OrdersService {
         throw new BadRequestException(`Asset reserve not found for ${assetSymbol}`);
       }
 
-      if (currentReserve.reserve_amount < roundedAssetAmount) {
+      if (currentReserve.reserve_amount < assetAmount) {
         throw new BadRequestException(
           `Insufficient reserves. Available: ${currentReserve.reserve_amount}, Requested: ${usdcAmount}`
         );
       }
 
       // Update asset reserve (negative delta for sell)
-      const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, -roundedAssetAmount);
+      const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, -assetAmount);
 
        // Burn tokens for the user
-      await this.tokenService.burnTokens(user, token, roundedAssetAmount.toString() || '');
+      await this.tokenService.burnTokens(user, token, assetAmount.toString() || '');
 
       // Transfer USDC back to user via order contract
       await this.tokenService.withdrawUSDC(usdcAmount, user);
 
       return {
         success: true,
-        message: `Successfully sold ${usdcAmount} USD worth of ${assetSymbol} (${roundedAssetAmount} tokens burned)`,
+        message: `Successfully sold ${usdcAmount} USD worth of ${assetSymbol} (${assetAmount} tokens burned)`,
         assetSymbol,
         amount: usdcAmount,
-        tokenBurned: roundedAssetAmount,
+        tokenBurned: assetAmount,
         newTokenReserve: updatedReserve.reserve_amount
       };
     } catch (error) {
