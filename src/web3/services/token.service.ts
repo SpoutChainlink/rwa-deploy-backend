@@ -10,6 +10,8 @@ import { ConfigService } from '@nestjs/config';
 export class TokenService {
     private readonly identityRegistryAddress: string;
     private readonly orderContractAddress: string;
+    private nonceManager: Map<string, number> = new Map();
+    private noncePromises: Map<string, Promise<number>> = new Map();
 
     constructor(
         @Inject(WEB3_HTTP) 
@@ -27,6 +29,64 @@ export class TokenService {
             throw new Error('ORDER_CONTRACT_ADDRESS is not defined in configuration');
         }
         this.orderContractAddress = orderAddress;
+    }
+
+    /**
+     * Get the next available nonce for an address, managing it locally to prevent conflicts
+     * @param address - The wallet address to get nonce for
+     * @returns Promise<number> - The next available nonce
+     */
+    private async getNextNonce(address: string): Promise<number> {
+        // If there's already a pending nonce request for this address, wait for it
+        if (this.noncePromises.has(address)) {
+            await this.noncePromises.get(address);
+        }
+
+        // Create a new promise for this nonce request
+        const noncePromise = this.fetchAndIncrementNonce(address);
+        this.noncePromises.set(address, noncePromise);
+
+        try {
+            const nonce = await noncePromise;
+            return nonce;
+        } finally {
+            // Clean up the promise after it's resolved
+            this.noncePromises.delete(address);
+        }
+    }
+
+    /**
+     * Fetch current nonce from blockchain and increment local counter
+     * @param address - The wallet address
+     * @returns Promise<number> - The next nonce to use
+     */
+    private async fetchAndIncrementNonce(address: string): Promise<number> {
+        let currentNonce: number;
+
+        if (this.nonceManager.has(address)) {
+            // Use local nonce counter
+            currentNonce = this.nonceManager.get(address)!;
+        } else {
+            // First time, fetch from blockchain
+            currentNonce = await this.httpProvider.getTransactionCount(address, 'latest');
+        }
+
+        const nextNonce = currentNonce;
+        // Increment for next transaction
+        this.nonceManager.set(address, currentNonce + 1);
+        
+        console.log(`Address ${address}: using nonce ${nextNonce}, next will be ${currentNonce + 1}`);
+        return nextNonce;
+    }
+
+    /**
+     * Reset nonce counter for an address (useful if transactions fail or for testing)
+     * @param address - The wallet address to reset nonce for
+     */
+    private async resetNonce(address: string): Promise<void> {
+        const currentNonce = await this.httpProvider.getTransactionCount(address, 'latest');
+        this.nonceManager.set(address, currentNonce);
+        console.log(`Reset nonce for ${address} to ${currentNonce}`);
     }
 
     /**
@@ -58,6 +118,9 @@ export class TokenService {
      * @returns Transaction hash
      */
     async mintTokens(userAddress: string, tokenAddress: string, amount: number): Promise<string> {
+        // Create agent signer from private key (moved outside try block for error handling)
+        const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
+        
         try {
             // Validate addresses
             if (!ethers.isAddress(userAddress)) {
@@ -73,9 +136,6 @@ export class TokenService {
                 throw new Error(`User ${userAddress} is not verified in identity registry`);
             }
             console.log(`User ${userAddress} is verified in identity registry`);
-
-            // Create agent signer from private key
-            const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
             
             // Create contract instance with agent signer
             const token = new ethers.Contract(tokenAddress, ERC3643_ABI, agentSigner);
@@ -94,10 +154,8 @@ export class TokenService {
             const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
             const mintAmount = ethers.parseUnits(roundedAssetAmount, decimals);
 
-            // Get the latest nonce for the agent signer and increment it
-            const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
-            const nextNonce = currentNonce + 1;
-            console.log(`Current nonce for ${agentSigner.address}: ${currentNonce}, using nonce: ${nextNonce}`);
+            // Get the next nonce using nonce manager
+            const nextNonce = await this.getNextNonce(agentSigner.address);
 
             const gasEstimate = await token.mint.estimateGas(userAddress, mintAmount);
             const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
@@ -114,6 +172,11 @@ export class TokenService {
             
             return tx.hash;
         } catch (error) {
+            // If it's a nonce-related error, reset the nonce counter
+            if (error.message && (error.message.includes('nonce') || error.message.includes('replacement transaction underpriced'))) {
+                console.log(`Nonce error detected, resetting nonce for ${agentSigner.address}`);
+                await this.resetNonce(agentSigner.address);
+            }
             console.error(`Error minting tokens for user: ${userAddress}, token: ${tokenAddress}`, error);
             throw new Error(`Failed to mint tokens: ${error.message}`);
         }
@@ -127,6 +190,9 @@ export class TokenService {
      * @returns Transaction hash
      */
     async burnTokens(userAddress: string, tokenAddress: string, amount: number): Promise<string> {
+    // Create agent signer from private key (moved outside try block for error handling)
+    const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
+    
     try {
         // Validate addresses
         if (!ethers.isAddress(userAddress)) {
@@ -142,9 +208,6 @@ export class TokenService {
             throw new Error(`User ${userAddress} is not verified in identity registry`);
         }
         console.log(`User ${userAddress} is verified in identity registry`);
-
-        // Create agent signer from private key
-        const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
         
         // Create contract instance with agent signer
         const token = new ethers.Contract(tokenAddress, ERC3643_ABI, agentSigner);
@@ -169,10 +232,8 @@ export class TokenService {
             throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
         }
 
-        // Get the latest nonce for the agent signer and increment it
-        const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
-        const nextNonce = currentNonce + 1;
-        console.log(`Current nonce for ${agentSigner.address}: ${currentNonce}, using nonce: ${nextNonce}`);
+        // Get the next nonce using nonce manager
+        const nextNonce = await this.getNextNonce(agentSigner.address);
 
         // Estimate gas for the burn operation
         const gasEstimate = await token.burn.estimateGas(userAddress, burnAmount);
@@ -191,6 +252,11 @@ export class TokenService {
 
         return tx.hash;
     } catch (error) {
+        // If it's a nonce-related error, reset the nonce counter
+        if (error.message && (error.message.includes('nonce') || error.message.includes('replacement transaction underpriced'))) {
+            console.log(`Nonce error detected, resetting nonce for ${agentSigner.address}`);
+            await this.resetNonce(agentSigner.address);
+        }
         console.error(`Error burning tokens for user: ${userAddress}, token: ${tokenAddress}`, error);
         throw new Error(`Failed to burn tokens: ${error.message}`);
     }
@@ -203,14 +269,14 @@ export class TokenService {
      * @returns Transaction hash
      */
     async withdrawUSDC(amount: number, userAddress: string): Promise<string> {
+        // Create agent signer from private key (moved outside try block for error handling)
+        const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
+        
         try {
             // Validate user address
             if (!ethers.isAddress(userAddress)) {
                 throw new Error('Invalid user address');
             }
-
-            // Create agent signer from private key
-            const agentSigner = new ethers.Wallet(this.config.get<string>('PRIVATE_KEY') || '', this.httpProvider);
             
             // Create order contract instance with agent signer
             const orderContract = new ethers.Contract(
@@ -224,10 +290,8 @@ export class TokenService {
             const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
             const usdcAmount = ethers.parseUnits(roundedAssetAmount.toString(), 6);
 
-            // Get the latest nonce for the agent signer and increment it
-            const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
-            const nextNonce = currentNonce + 1;
-            console.log(`Current nonce for ${agentSigner.address}: ${currentNonce}, using nonce: ${nextNonce}`);
+            // Get the next nonce using nonce manager
+            const nextNonce = await this.getNextNonce(agentSigner.address);
 
             // Estimate gas for the withdraw operation
             const gasEstimate = await orderContract['withdrawUSDC'].estimateGas(usdcAmount, userAddress);
@@ -246,6 +310,11 @@ export class TokenService {
             
             return tx.hash;
         } catch (error) {
+            // If it's a nonce-related error, reset the nonce counter
+            if (error.message && (error.message.includes('nonce') || error.message.includes('replacement transaction underpriced'))) {
+                console.log(`Nonce error detected, resetting nonce for ${agentSigner.address}`);
+                await this.resetNonce(agentSigner.address);
+            }
             console.error(`Error withdrawing USDC for user: ${userAddress}}`, error);
             throw new Error(`Failed to withdraw USDC: ${error.message}`);
         }
