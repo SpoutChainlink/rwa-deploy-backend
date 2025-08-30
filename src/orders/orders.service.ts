@@ -35,7 +35,7 @@ export class OrdersService {
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, assetAmount);
 
       // Mint tokens for the user
-      await this.tokenService.mintTokens(user, token, assetAmount.toString() || '');
+      await this.tokenService.mintTokens(user, token, assetAmount);
 
       return {
         success: true,
@@ -83,7 +83,7 @@ export class OrdersService {
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, -assetAmount);
 
        // Burn tokens for the user
-      await this.tokenService.burnTokens(user, token, assetAmount.toString() || '');
+      await this.tokenService.burnTokens(user, token, assetAmount);
 
       // Transfer USDC back to user via order contract
       await this.tokenService.withdrawUSDC(usdcAmount, user);

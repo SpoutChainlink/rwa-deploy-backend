@@ -57,7 +57,7 @@ export class TokenService {
      * @param amount - The amount of tokens to mint (in wei/smallest unit)
      * @returns Transaction hash
      */
-    async mintTokens(userAddress: string, tokenAddress: string, amount: string): Promise<string> {
+    async mintTokens(userAddress: string, tokenAddress: string, amount: number): Promise<string> {
         try {
             // Validate addresses
             if (!ethers.isAddress(userAddress)) {
@@ -81,7 +81,7 @@ export class TokenService {
             const token = new ethers.Contract(tokenAddress, ERC3643_ABI, agentSigner);
 
             // Get the actual decimals from the token contract
-            const decimals = await token.decimals();
+            const decimals = Number(await token.decimals());
             
             const isAgent = await token.isAgent(agentSigner.address);
             
@@ -90,10 +90,13 @@ export class TokenService {
             }
             console.log(`Signer ${agentSigner.address} is an agent on the token contract ${tokenAddress}`);
 
-            // Use the actual token decimals instead of hardcoded 18
-            const mintAmount = ethers.parseUnits(amount, decimals);
+            const factor = 10 ** decimals; // e.g., 6 decimals → 1_000_000
+            const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
+            const mintAmount = ethers.parseUnits(roundedAssetAmount, decimals);
             const gasEstimate = await token.mint.estimateGas(userAddress, mintAmount);
-            const gasLimit = gasEstimate * BigInt(120) / BigInt(100);
+            const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+
+            console.log(`Minting ${roundedAssetAmount} tokens (${mintAmount} wei) to ${userAddress}`);
             
             // Call mint function with gas limit
             const tx = await token.mint(userAddress, mintAmount, { gasLimit });
@@ -118,7 +121,7 @@ export class TokenService {
      * @param amount - The amount of tokens to burn (in wei/smallest unit)
      * @returns Transaction hash
      */
-    async burnTokens(userAddress: string, tokenAddress: string, amount: string): Promise<string> {
+    async burnTokens(userAddress: string, tokenAddress: string, amount: number): Promise<string> {
     try {
         // Validate addresses
         if (!ethers.isAddress(userAddress)) {
@@ -142,7 +145,7 @@ export class TokenService {
         const token = new ethers.Contract(tokenAddress, ERC3643_ABI, agentSigner);
 
         // Get the actual decimals from the token contract
-        const decimals = await token.decimals();
+        const decimals = Number(await token.decimals());
         
         const isAgent = await token.isAgent(agentSigner.address);
         
@@ -153,15 +156,20 @@ export class TokenService {
 
         // Check if user has sufficient balance to burn
         const balance = await token.balanceOf(userAddress);
-        const burnAmount = ethers.parseUnits(amount, decimals);
-        
+        const factor = 10 ** decimals; // e.g., 6 decimals → 1_000_000
+        const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
+        const burnAmount = ethers.parseUnits(roundedAssetAmount, decimals);
+
         if (balance < burnAmount) {
             throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
         }
 
         // Estimate gas for the burn operation
         const gasEstimate = await token.burn.estimateGas(userAddress, burnAmount);
-        const gasLimit = gasEstimate * BigInt(120) / BigInt(100);
+        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+
+        console.log(`Burning ${burnAmount} round off tokens`);
+
         
         // Call burn function with gas limit
         const tx = await token.burn(userAddress, burnAmount, { gasLimit });
@@ -203,7 +211,9 @@ export class TokenService {
             );
 
             // Convert amount to USDC wei (USDC has 6 decimal places)
-            const usdcAmount = ethers.parseUnits(amount.toString(), 6);
+            const factor = 10 ** 6; // e.g., 6 decimals → 1_000_000
+            const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
+            const usdcAmount = ethers.parseUnits(roundedAssetAmount.toString(), 6);
 
             // Get the latest nonce for the agent signer and increment it
             const currentNonce = await this.httpProvider.getTransactionCount(agentSigner.address, 'latest');
@@ -212,7 +222,7 @@ export class TokenService {
 
             // Estimate gas for the withdraw operation
             const gasEstimate = await orderContract['withdrawUSDC'].estimateGas(usdcAmount, userAddress);
-            const gasLimit = gasEstimate * BigInt(120) / BigInt(100);
+            const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
             
             // Call withdrawUSDC function with gas limit and nonce
             const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { 
