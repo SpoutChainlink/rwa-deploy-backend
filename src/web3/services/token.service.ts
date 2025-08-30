@@ -108,7 +108,7 @@ export class TokenService {
             
             return tx.hash;
         } catch (error) {
-            console.error('Error minting tokens:', error);
+            console.error(`Error minting tokens for user: ${userAddress}, token: ${tokenAddress}`, error);
             throw new Error(`Failed to mint tokens: ${error.message}`);
         }
     }
@@ -180,7 +180,7 @@ export class TokenService {
 
         return tx.hash;
     } catch (error) {
-        console.error('Error burning tokens:', error);
+        console.error(`Error burning tokens for user: ${userAddress}, token: ${tokenAddress}`, error);
         throw new Error(`Failed to burn tokens: ${error.message}`);
     }
 }
@@ -235,7 +235,7 @@ export class TokenService {
             
             return tx.hash;
         } catch (error) {
-            console.error('Error withdrawing USDC:', error);
+            console.error(`Error withdrawing USDC for user: ${userAddress}}`, error);
             throw new Error(`Failed to withdraw USDC: ${error.message}`);
         }
     }
