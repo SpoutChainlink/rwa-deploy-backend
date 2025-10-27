@@ -5,6 +5,7 @@ import { ERC3643_ABI } from 'src/shared/abi/ERC3643.abi';
 import { IDENTITY_REGISTRY_CONTRACT } from 'src/shared/abi/IDENTITY_REGISTRY.abi';
 import { ORDER_CONTRACT_EVENTS_ABI } from 'src/shared/abi/ORDER_EVENTS.abi';
 import { ConfigService } from '@nestjs/config';
+import { AlpacaService } from '../../alpaca/alpaca.service';
 
 @Injectable()
 export class TokenService {
@@ -17,6 +18,7 @@ export class TokenService {
         @Inject(WEB3_HTTP) 
         private httpProvider: ethers.JsonRpcProvider,
         private readonly config: ConfigService,
+        private readonly alpacaService: AlpacaService,
     ) {
         const registryAddress = this.config.get<string>('IDENTITY_REGISTRY_ADDRESS');
         if (!registryAddress) {
@@ -173,6 +175,17 @@ export class TokenService {
             const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
             const mintAmount = ethers.parseUnits(roundedAssetAmount, decimals);
 
+            // Place Alpaca order
+            const orderResponse = await this.alpacaService.placeOrder('LQD', roundedAssetAmount, 'buy');
+            console.log(`Alpaca order placed: ${JSON.stringify(orderResponse)}`);
+
+            // // Check order until filled
+            // const isFilled = await this.alpacaService.checkUntilOrderFilled(orderResponse.id);
+            // if (!isFilled) {
+            //     throw new Error(`Alpaca order ${orderResponse.id} was not filled in the expected time`);
+            // }
+            // console.log(`Alpaca order ${orderResponse.id} is filled`);
+
             // Get the next nonce using nonce manager
             // const nextNonce = await this.getNextNonce(agentSigner.address);
 
@@ -247,6 +260,8 @@ export class TokenService {
         const factor = 10 ** decimals; // e.g., 6 decimals → 1_000_000
         const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
         const burnAmount = ethers.parseUnits(roundedAssetAmount, decimals);
+
+        const orderResponse = await this.alpacaService.placeOrder('LQD', roundedAssetAmount, 'sell');
 
         if (balance < burnAmount) {
             throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
