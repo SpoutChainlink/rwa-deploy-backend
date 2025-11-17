@@ -23,7 +23,7 @@ export class EventListenerService {
     private readonly ordersService: OrdersService
   ) {}
 
-  @Cron('* * * * *')
+  @Cron('*/15 * * * * *')
   async checkLatestBlock() {
     await this.getBuySellEvents();
   }

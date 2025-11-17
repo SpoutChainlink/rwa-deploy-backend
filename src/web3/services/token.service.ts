@@ -176,8 +176,8 @@ export class TokenService {
             const mintAmount = ethers.parseUnits(roundedAssetAmount, decimals);
 
             // Place Alpaca order
-            const orderResponse = await this.alpacaService.placeOrder('LQD', roundedAssetAmount, 'buy');
-            console.log(`Alpaca order placed: ${JSON.stringify(orderResponse)}`);
+            // const orderResponse = await this.alpacaService.placeOrder('LQD', roundedAssetAmount, 'buy');
+            // console.log(`Alpaca order placed: ${JSON.stringify(orderResponse)}`);
 
             // // Check order until filled
             // const isFilled = await this.alpacaService.checkUntilOrderFilled(orderResponse.id);
@@ -261,7 +261,7 @@ export class TokenService {
         const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
         const burnAmount = ethers.parseUnits(roundedAssetAmount, decimals);
 
-        const orderResponse = await this.alpacaService.placeOrder('LQD', roundedAssetAmount, 'sell');
+        // const orderResponse = await this.alpacaService.placeOrder('LQD', roundedAssetAmount, 'sell');
 
         if (balance < burnAmount) {
             throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
