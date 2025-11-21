@@ -131,12 +131,17 @@ export class UserService {
       );
       this.logger.log(`GasPrice: ${gasPrice} & gasEstimate: ${gasEstimate}`);
       this.logger.log(`UserAddress: ${userAddress}, onchainIDAddress: ${onchainIDAddress}, countryCode ${countryCode}`);
+      
+      const nonce = await this.provider.getTransactionCount(agentSigner.address, "pending");
+      this.logger.log(`Using nonce: ${nonce}`);
+      
       // Register the identity
       const tx = await identityRegistry.registerIdentity(
         userAddress,        // User's EOA
         onchainIDAddress,   // User's OnchainID contract
         countryCode,         // Country code
         {
+          nonce,
           gasLimit: gasEstimate * BigInt(120) / BigInt(100),
           gasPrice,
         }

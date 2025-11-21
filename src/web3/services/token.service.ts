@@ -11,8 +11,6 @@ import { AlpacaService } from '../../alpaca/alpaca.service';
 export class TokenService {
     private readonly identityRegistryAddress: string;
     private readonly orderContractAddress: string;
-    // private nonceManager: Map<string, number> = new Map();
-    // private noncePromises: Map<string, Promise<number>> = new Map();
 
     constructor(
         @Inject(WEB3_HTTP) 
@@ -32,83 +30,6 @@ export class TokenService {
         }
         this.orderContractAddress = orderAddress;
     }
-
-    /**
-     * Get the next available nonce for an address, managing it locally to prevent conflicts
-     * @param address - The wallet address to get nonce for
-     * @returns Promise<number> - The next available nonce
-     */
-    // private async getNextNonce(address: string): Promise<number> {
-    //     // If there's already a pending nonce request for this address, wait for it
-    //     if (this.noncePromises.has(address)) {
-    //         await this.noncePromises.get(address);
-    //     }
-
-    //     // Create a new promise for this nonce request
-    //     const noncePromise = this.fetchAndIncrementNonce(address);
-    //     this.noncePromises.set(address, noncePromise);
-
-    //     try {
-    //         const nonce = await noncePromise;
-    //         return nonce;
-    //     } finally {
-    //         // Clean up the promise after it's resolved
-    //         this.noncePromises.delete(address);
-    //     }
-    // }
-
-    /**
-     * Fetch current nonce from blockchain and increment local counter
-     * @param address - The wallet address
-     * @returns Promise<number> - The next nonce to use
-     */
-    // private async fetchAndIncrementNonce(address: string): Promise<number> {
-    //     let currentNonce: number;
-    //     let blockchainNonce: number;
-
-    //     // Always check the blockchain nonce for comparison
-    //     blockchainNonce = await this.httpProvider.getTransactionCount(address, 'latest');
-
-    //     if (this.nonceManager.has(address)) {
-    //         // Use local nonce counter
-    //         currentNonce = this.nonceManager.get(address)!;
-            
-    //         // Safety check: if our local nonce is too far ahead or behind, resync
-    //         if (currentNonce < blockchainNonce || currentNonce > blockchainNonce + 10) {
-    //             console.log(`Nonce out of sync for ${address}. Local: ${currentNonce}, Blockchain: ${blockchainNonce}. Resyncing...`);
-    //             currentNonce = blockchainNonce;
-    //         }
-    //     } else {
-    //         // First time, fetch from blockchain
-    //         currentNonce = blockchainNonce;
-    //     }
-
-    //     const nextNonce = currentNonce;
-    //     // Increment for next transaction
-    //     this.nonceManager.set(address, currentNonce + 1);
-        
-    //     console.log(`Address ${address}: blockchain nonce ${blockchainNonce}, using nonce ${nextNonce}, next will be ${currentNonce + 1}`);
-    //     return nextNonce;
-    // }
-
-    /**
-     * Reset nonce counter for an address (useful if transactions fail or for testing)
-     * @param address - The wallet address to reset nonce for
-     */
-    // private async resetNonce(address: string): Promise<void> {
-    //     const currentNonce = await this.httpProvider.getTransactionCount(address, 'latest');
-    //     this.nonceManager.set(address, currentNonce);
-    //     console.log(`Reset nonce for ${address} to ${currentNonce}`);
-    // }
-
-    /**
-     * Clear all nonce counters (useful for debugging or restart scenarios)
-     */
-    // private clearAllNonces(): void {
-    //     this.nonceManager.clear();
-    //     this.noncePromises.clear();
-    //     console.log('Cleared all nonce counters');
-    // }
 
     /**
      * Verify if a user is verified in the identity registry
@@ -186,17 +107,24 @@ export class TokenService {
             // }
             // console.log(`Alpaca order ${orderResponse.id} is filled`);
 
-            // Get the next nonce using nonce manager
-            // const nextNonce = await this.getNextNonce(agentSigner.address);
-
+            if (!agentSigner.provider) {
+                throw new Error('Provider is not set on agentSigner');
+            }
+            const feeData = await agentSigner.provider.getFeeData();
+            const gasPrice = feeData.gasPrice;
             const gasEstimate = await token.mint.estimateGas(userAddress, mintAmount);
-            const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+            console.log(`GasPrice: ${gasPrice} & gasEstimate: ${gasEstimate}`);
+            
+            const nonce = await this.httpProvider.getTransactionCount(agentSigner.address, "pending");
+            console.log(`Using nonce: ${nonce}`);
 
             console.log(`Minting ${roundedAssetAmount} tokens (${mintAmount} wei) to ${userAddress}`);
             
-            // Call mint function with gas limit and nonce
-            // const tx = await token.mint(userAddress, mintAmount, { gasLimit, nonce: nextNonce });
-            const tx = await token.mint(userAddress, mintAmount, { gasLimit });
+            const tx = await token.mint(userAddress, mintAmount, {
+                nonce,
+                gasLimit: gasEstimate * BigInt(120) / BigInt(100),
+                gasPrice,
+            });
             console.log(`Transaction hash: ${tx.hash}, Minting ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
 
             // Wait for transaction confirmation
@@ -205,11 +133,6 @@ export class TokenService {
             
             return tx.hash;
         } catch (error) {
-            // If it's a nonce-related error, reset the nonce counter
-            // if (error.message && (error.message.includes('nonce') || error.message.includes('replacement transaction underpriced'))) {
-            //     console.log(`Nonce error detected, resetting nonce for ${agentSigner.address}`);
-            //     await this.resetNonce(agentSigner.address);
-            // }
             console.error(`Error minting tokens for user: ${userAddress}, token: ${tokenAddress}`, error);
             throw new Error(`Failed to mint tokens: ${error.message}`);
         }
@@ -267,19 +190,23 @@ export class TokenService {
             throw new Error(`Insufficient balance. User has ${ethers.formatUnits(balance, decimals)} tokens, trying to burn ${amount}`);
         }
 
-        // Get the next nonce using nonce manager
-        // const nextNonce = await this.getNextNonce(agentSigner.address);
-
-        // Estimate gas for the burn operation
+        if (!agentSigner.provider) {
+            throw new Error('Provider is not set on agentSigner');
+        }
+        const feeData = await agentSigner.provider.getFeeData();
+        const gasPrice = feeData.gasPrice;
         const gasEstimate = await token.burn.estimateGas(userAddress, burnAmount);
-        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+        console.log(`GasPrice: ${gasPrice} & gasEstimate: ${gasEstimate}`);
+        
+        const nonce = await this.httpProvider.getTransactionCount(agentSigner.address, "pending");
+        console.log(`Using nonce: ${nonce}`);
 
         console.log(`Burning ${burnAmount} round off tokens`);
-
-        
-        // Call burn function with gas limit and nonce
-        // const tx = await token.burn(userAddress, burnAmount, { gasLimit, nonce: nextNonce });
-        const tx = await token.burn(userAddress, burnAmount, { gasLimit });
+        const tx = await token.burn(userAddress, burnAmount, {
+            nonce,
+            gasLimit: gasEstimate * BigInt(120) / BigInt(100),
+            gasPrice,
+        });
         console.log(`Transaction hash: ${tx.hash}, Burning ${roundedAssetAmount}, user: ${userAddress}; token contract ${tokenAddress}`);
 
         // Wait for transaction confirmation
@@ -288,11 +215,6 @@ export class TokenService {
 
         return tx.hash;
     } catch (error) {
-        // If it's a nonce-related error, reset the nonce counter
-        // if (error.message && (error.message.includes('nonce') || error.message.includes('replacement transaction underpriced'))) {
-        //     console.log(`Nonce error detected, resetting nonce for ${agentSigner.address}`);
-        //     await this.resetNonce(agentSigner.address);
-        // }
         console.error(`Error burning tokens for user: ${userAddress}, token: ${tokenAddress}`, error);
         throw new Error(`Failed to burn tokens: ${error.message}`);
     }
@@ -326,20 +248,21 @@ export class TokenService {
             const roundedAssetAmount = (Math.floor(amount * factor) / factor).toString();
             const usdcAmount = ethers.parseUnits(roundedAssetAmount.toString(), 6);
 
-            // Get the next nonce using nonce manager
-            // const nextNonce = await this.getNextNonce(agentSigner.address);
-
-            // Estimate gas for the withdraw operation
+            if (!agentSigner.provider) {
+                throw new Error('Provider is not set on agentSigner');
+            }
+            const feeData = await agentSigner.provider.getFeeData();
+            const gasPrice = feeData.gasPrice;
             const gasEstimate = await orderContract['withdrawUSDC'].estimateGas(usdcAmount, userAddress);
-            const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+            console.log(`GasPrice: ${gasPrice} & gasEstimate: ${gasEstimate}`);
             
-            // Call withdrawUSDC function with gas limit and nonce
-            // const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { 
-            //     gasLimit, 
-            //     nonce: nextNonce 
-            // });
+            const nonce = await this.httpProvider.getTransactionCount(agentSigner.address, "pending");
+            console.log(`Using nonce: ${nonce}`);
+            
             const tx = await orderContract['withdrawUSDC'](usdcAmount, userAddress, { 
-                gasLimit
+                nonce,
+                gasLimit: gasEstimate * BigInt(120) / BigInt(100),
+                gasPrice,
             });
             console.log(`Withdrawing ${amount} USDC to ${userAddress} and tx is ${tx.hash}`);
             
@@ -349,11 +272,6 @@ export class TokenService {
             
             return tx.hash;
         } catch (error) {
-            // If it's a nonce-related error, reset the nonce counter
-            // if (error.message && (error.message.includes('nonce') || error.message.includes('replacement transaction underpriced'))) {
-            //     console.log(`Nonce error detected, resetting nonce for ${agentSigner.address}`);
-            //     await this.resetNonce(agentSigner.address);
-            // }
             console.error(`Error withdrawing USDC for user: ${userAddress}}`, error);
             throw new Error(`Failed to withdraw USDC: ${error.message}`);
         }
