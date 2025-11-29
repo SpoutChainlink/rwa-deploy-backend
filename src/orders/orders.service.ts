@@ -4,6 +4,7 @@ import { AlpacaService } from '../alpaca/alpaca.service';
 import { OrderRequest } from 'src/shared/models/order-request.model';
 import { OrderResponse } from 'src/shared/models/order-response.model';
 import { TokenService } from 'src/web3/services/token.service';
+import { OrderBookService, OrderStatus } from './order-book.service';
 
 @Injectable()
 export class OrdersService {
@@ -12,7 +13,8 @@ export class OrdersService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly alpacaService: AlpacaService,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
+    private readonly orderBookService: OrderBookService
   ) {}
 
   /**
@@ -22,7 +24,7 @@ export class OrdersService {
    */
   async buyOrder(orderRequest: OrderRequest): Promise<OrderResponse> {
     try {
-      const { user, token, assetSymbol, usdcAmount, assetAmount, price } = orderRequest;
+      const { user, token, assetSymbol, usdcAmount, assetAmount, price, limitPrice } = orderRequest;
 
       // Validate input
       if (!assetSymbol || usdcAmount <= 0) {
@@ -30,6 +32,27 @@ export class OrdersService {
       }
 
       this.logger.log(`Processing buy order for ${usdcAmount}$ ${assetSymbol}`);
+
+      // Place order with Alpaca
+      let alpacaOrderResponse;
+      if (!limitPrice || limitPrice === 0) { //market day order and queue orders
+        alpacaOrderResponse = await this.alpacaService.placeOrder(assetSymbol, assetAmount.toString(), 'buy');
+      } else { // overnight 24/5 orders
+        alpacaOrderResponse = await this.alpacaService.placeOvernightOrder(assetSymbol, assetAmount.toString(), 'buy', limitPrice);
+      }
+
+      // Add order to order book
+      this.orderBookService.addOrder({
+        orderId: alpacaOrderResponse.id,
+        user,
+        assetSymbol,
+        orderAmount: assetAmount,
+        limitPrice: limitPrice || 0,
+        price,
+        orderStatus: OrderStatus.PENDING
+      });
+      this.logger.log(`Added buy order ${alpacaOrderResponse.id} to order book`);
+
 
       // Update asset reserve (using tokensToMint for buy)
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, assetAmount);
@@ -58,7 +81,7 @@ export class OrdersService {
    */
   async sellOrder(orderRequest: OrderRequest): Promise<OrderResponse> {
     try {
-      const { user, token, assetSymbol, usdcAmount, assetAmount, price } = orderRequest;
+      const { user, token, assetSymbol, usdcAmount, assetAmount, price, limitPrice } = orderRequest;
 
       // Validate input
       if (!assetSymbol || usdcAmount <= 0) {
@@ -78,6 +101,27 @@ export class OrdersService {
           `Insufficient reserves. Available: ${currentReserve.reserve_amount}, Requested: ${usdcAmount}`
         );
       }
+
+      // Place Aplaca order
+      let alpacaOrderResponse;
+      if (!limitPrice || limitPrice === 0) { //market day order and queue orders
+        alpacaOrderResponse = await this.alpacaService.placeOrder(assetSymbol, assetAmount.toString(), 'sell');
+      } else { // overnight 24/5 orders
+        alpacaOrderResponse = await this.alpacaService.placeOvernightOrder(assetSymbol, assetAmount.toString(), 'sell', limitPrice);
+      }
+
+      // Add order to order book
+      this.orderBookService.addOrder({
+        orderId: alpacaOrderResponse.id,
+        user,
+        assetSymbol,
+        orderAmount: assetAmount,
+        limitPrice: limitPrice || 0,
+        price,
+        orderStatus: OrderStatus.PENDING
+      });
+      this.logger.log(`Added sell order ${alpacaOrderResponse.id} to order book`);
+
 
       // Update asset reserve (negative delta for sell)
       const updatedReserve = await this.supabaseService.updateAssetReserve(assetSymbol, -assetAmount);

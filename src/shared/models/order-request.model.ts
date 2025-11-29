@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsPositive, IsNotEmpty } from 'class-validator';
+import { IsString, IsNumber, IsPositive, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class OrderRequest {
   
@@ -59,4 +59,14 @@ export class OrderRequest {
   @IsNumber()
   @IsPositive()
   price: number;
+
+  @ApiProperty({
+    description: 'The limit price for the order (optional)',
+    example: 2100.0,
+    type: Number,
+    required: false
+  })
+  @IsNumber()
+  @IsOptional()
+  limitPrice?: number;
 }

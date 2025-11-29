@@ -120,4 +120,42 @@ export class AlpacaService {
         console.log(`Order ${orderId} was not filled after ${maxAttempts} attempts`);
         return false;
     }
+
+    async placeOvernightOrder(
+        symbol: string,
+        qty: string,
+        side: 'buy' | 'sell',
+        limitPrice: number
+    ): Promise<any> {
+        try {
+            const credentials = Buffer.from(`${this.apiKeyId}:${this.apiSecretKey}`).toString('base64');
+
+            const orderRequest = {
+                symbol,
+                qty,
+                side,
+                type: 'limit',
+                time_in_force: 'day',
+                limit_price: limitPrice,
+                extended_hours: true
+            };
+
+            const response = await axios.post(
+                `https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/${this.accountId}/orders`,
+                orderRequest,
+                {
+                    headers: {
+                        accept: 'application/json',
+                        'content-type': 'application/json',
+                        authorization: `Basic ${credentials}`
+                    },
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            console.error('Alpaca overnight order error:', error.response?.data || error.message);
+            throw new Error(`Failed to place overnight order: ${error.response?.data?.message || error.message}`);
+        }
+    }
 }
